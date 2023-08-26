@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dijkstra Algoritması Görselleştirme</title>
+    <style>
+        #canvas {
+            border: 1px solid black;
+        }
+        .title1{
+            text-align: center;
+        }
+      
+    </style>
+</head>
+<body>
+    <h1 class="title1"><em>Dijkstra's Algorithm</em></h1>
+    <p>Enter the number of nodes: <input type="number" id="nodeCount"></p>
+    <button onclick="generateGraph()">Create the graph and find the shortest way:</button> <!--fonksiyona tıklaandığında generateGraph fonksiyonu çağırılacak-->
+    <canvas class="canvas" id="canvas" width="500" height="500"></canvas>
+    <h2>Sonuç:</h2>
+    <div id="result"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d'); //canvas üzerine 2 boyutlu çizim
+        const nodeRadius = 20;
+
+        let nodeCount = 0;
+        
+      
+        let graph = {};
+
+        canvas.addEventListener('click', handleCanvasClick); //tıklandığında handleCanvasClick fonksiyonu çağırılacak
+
+        function generateGraph() {
+            nodeCount = parseInt(document.getElementById('nodeCount').value); //ilk olarak nodeCount idsine sahip olan input elementin değerini alacak parseInt(...) fonksiyonunun(string değerini tamsayıya dçnüştürüyor) sonucu, tamsayıya dönüştürülmüş input alanının değerini içerir.
+            graph = generateRandomGraph(nodeCount);
+            drawGraph(graph);
+            findShortestPath(graph);
+        }
+
+        function generateRandomGraph(nodeCount) {
+            const generatedGraph = {};
+
+            for (let i = 0; i < nodeCount; i++) {
+                generatedGraph[String.fromCharCode(65 + i)] = {}; //65: A(unicode), A'dan başlayarak düğüm oluşturuyor.
+
+                for (let j = 0; j < nodeCount; j++) {
+                    if (i !== j) { // düğümün kendine çıkan çizgi(kenar) eklmesinin önüne geçer.Düğüm sayısından 1 eksik çizgi ekliyor.
+                        generatedGraph[String.fromCharCode(65 + i)][String.fromCharCode(65 + j)] = Math.floor(Math.random() * 10) + 1; //fromCharCode: unicode karakter kodlarını karaktere dönüştüren fonksiyondur.
+                    }    //Math.floor(Math.random() * 10) + 1: Bu ifade, rastgele bir tamsayı üretir. Math.random() 0 (dahil) ile 1 (hariç) arasında rasgele bir ondalıklı sayı üretir. Bu sayının 10 ile çarpılması 
+                         //ve ardından Math.floor() fonksiyonuyla yuvarlatılmasıyla 1 ile 10 arasında bir tam sayı elde edilir. Bu tam sayı, kenarın uzunluğunu temsil eder.
+                }
+            }
+
+            return generatedGraph;
+        }
+
+        function drawGraph(graph) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); //0:temizleme işleminin başlayacağı sol üst köşesinin yatay ve dikey koordinatlarını temsil eder.
+             // temizlenecek dikdörtgenin genişliği ve uzunluğu canvasa göre ayarlanır.<canvas> üzerindeki mevcut çizimleri siler ve sayfayı temizler. Bu genellikle animasyonlar veya dinamik çizimlerde kullanılır; çünkü her bir karede temizlenmeyen önceki çizimler birikerek ekranı kaplayabilir. Böylece yeni çizimler sorunsuzca gerçekleştirilir.
+            for (let node in graph) { //graph adlı bir nesnedeki her bir düğüm için işlemleri gerçekleştirir.
+                const angle = (2 * Math.PI * (node.charCodeAt(0) - 65)) / nodeCount; //her bir düğümün birim çemberdeki konumunu hesaplar. node.charCodeAt(0) ile düğüm adının Unicode karakter kodu alınır ve bunun 65 çıkarılması ile 'A' karakteri 0 derecede yer alır. Bu açı, düğümlerin dağılımını temsil eder.
+                const x = canvas.width / 2 + Math.cos(angle) * 150;//düğümlerin birim çemberdeki yatay konumunu temsil eder.
+                const y = canvas.height / 2 + Math.sin(angle) * 150; //Bu satır, her bir düğümün dikey koordinatını hesaplar.
+
+                ctx.beginPath(); //Bu, yeni bir çizim yolunun başladığını belirten bir metodur. Bu, bir düğüm çizimi için gerekli bir adımdır.
+                ctx.arc(x, y, nodeRadius, 0, 2 * Math.PI); //Bu, Canvas üzerinde bir daire çizmeye yarayan bir metoddur. x ve y, çemberin merkez koordinatlarını temsil eder. nodeRadius, çemberin yarıçapını belirler. 0 ve 2 * Math.PI, çemberin çizim açılarını belirler, yani çemberin tamamını çizer.
+                ctx.stroke(); //Bu, çizim yolunun çizim işlemini tamamlar ve çizimi görünür hale getirir.
+
+                ctx.fillText(node, x, y); // her düğümün adını (etiketini) çizim üzerine yazar. node, düğümün adını temsil eder. x ve y, metnin konumunu belirler.
+            }                       //node yazdırılacak metin, x ve y ise metnin konumunu belirler.
+        }
+       
+        function findShortestPath(graph) {
+    const startNode = 'A'; 
+    const endNode = 'D';   
+
+    const visited = {};
+    const distances = {};
+    const predecessors = {};
+    const queue = [];
+
+    for (let node in graph) {
+        distances[node] = Infinity; //her düğümün başlangıç düğümünden uzaklığı sonsuz olarak ayarlanır
+        predecessors[node] = null;  //her düğümün başlangıç düğümüne giden yolun öncüsü (bir önceki düğüm) henüz belirlenmediği anlamına gelen null olarak ayarlanır.
+    }
+    distances[startNode] = 0; // Başlangıç düğümüne olan uzaklık 0 olarak ayarlanır
+
+    queue.push(startNode);  //ilk giren ilk çıkar (FIFO) prensibiyle çalışır, yani en önce eklenen öğe en önce çıkarılır, push: queue adlı kuyruğa startNode adlı başlangıç düğümünü ekler
+//Bu satır, BFS algoritmasını başlatmak için kullanılır. BFS algoritması, başlangıç düğümünden başlayarak her bir komşu düğümü sırayla ziyaret eder, ardından bu komşu düğümlerin komşularını kuyruğa ekler ve işlem bu şekilde devam eder. Bu şekilde, düğümler en kısa yol sırasına göre ziyaret edilir ve en kısa yolların bulunması sağlanır.
+    while (queue.length > 0) { //bir graf içinde minimum mesafe yolunu bulmak için genişlik öncelikli arama algoritmasını kullanır
+        const currentNode = queue.shift(); //kuyruğun en başındaki elemanı kaldırarak onu alır ve currentNode adlı bir değişkene atar
+      
+        for (let neighbor in graph[currentNode]) { // currentNode'in komşularını gez
+            const weight = graph[currentNode][neighbor]; //current node ile komşu arasındaki uzaklık
+            const totalDistance = distances[currentNode] + weight; // Başlangıç noktasından currentNode'e gelmek için geçilen mesafe
+             
+            // Eğer yeni yol daha kısa ise
+            if (totalDistance < distances[neighbor]) {
+                distances[neighbor] = totalDistance; // Yeni mesafeyi güncelle
+                predecessors[neighbor] = currentNode; // Önceki düğümü güncelle
+
+                // Eğer komşu daha önce ziyaret edilmemişse, kuyruğa ekle
+                if (!visited[neighbor]) {
+                    queue.push(neighbor);
+                }
+            }
+        } //Bu algoritma, en kısa yolu bulmak için genişlik öncelikli olarak tüm olası yolları dolaşır. distances dizisi, her düğüme olan en kısa mesafeyi içerir. 
+        //predecessors dizisi ise her düğümün en kısa yoldaki önceki düğümünü içerir. Bu şekilde başlangıç düğümünden her düğüme olan en kısa yol ve yolun içindeki düğümler elde edilmiş olur.
+
+        visited[currentNode] = true; // currentNode'i ziyaret edildi olarak işaretle
+    }
+
+    let path = [];
+    let current = endNode;
+    while (current !== null) {  // Bitiş düğümünden başlayarak, başlangıç düğümüne geri gelene kadar devam et.
+        path.unshift(current);  //unshift() fonksiyonu, bir dizinin başına yeni elemanlar eklemek için kullanılan bir yöntemdir. Bu yöntem, dizinin mevcut elemanlarını kaydırarak yeni elemanları diziye ekler. 
+//current değişkeni bitiş düğümüne ayarlandı.            //Yani, dizinin ilk elemanı sonraki bir pozisyona kayar ve yeni eklenen elemanlar dizinin başına gelir.
+//Her adımda, mevcut düğüm path dizisinin başına (unshift ile) eklenir. Bu, yolu tersine çevirerek oluşturur, çünkü döngü başlangıcında bitiş düğümünden başlanıyor.
+        current = predecessors[current];
+        // path dizisi başlangıç düğümünden başlayıp bitiş düğümüne kadar giden bir dizi olur.
+    }
+
+    // En kısa yolun görselleştirilmesi
+    ctx.strokeStyle = 'blue'; //çizgilerin rengini belirler
+    ctx.lineWidth = 3;  //çizgilerin kalınlığığ 3 piksel
+    for (let i = 0; i < path.length - 1; i++) {
+        const start = path[i];
+        const end = path[i + 1];
+
+        const startX = canvas.width / 2 + Math.cos((2 * Math.PI * (start.charCodeAt(0) - 65)) / nodeCount) * 150; //başlangıç düğümünün daire üzerindeki x koordinatını hesaplar ve startX değişkenine atar. Bu, düğümün yatayda nerede olacağını belirler ve bağlantı çizgilerinin çizildiği çizim alanının ortasından belirli bir uzaklıkta yerleştirilmesini sağlar.
+        const startY = canvas.height / 2 + Math.sin((2 * Math.PI * (start.charCodeAt(0) - 65)) / nodeCount) * 150;
+        const endX = canvas.width / 2 + Math.cos((2 * Math.PI * (end.charCodeAt(0) - 65)) / nodeCount) * 150;
+        const endY = canvas.height / 2 + Math.sin((2 * Math.PI * (end.charCodeAt(0) - 65)) / nodeCount) * 150;
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY); //başlangıç noktası
+        ctx.lineTo(endX, endY); //bitiş noktası
+        ctx.stroke(); //belirlenen yolu çizmek için stroke işlemi yapılır. Bu, çizgiyi belirtilen renk ve kalınlıkla çizecektir.
+    }
+
+    const resultDiv = document.getElementById('result');
+    if (distances[endNode] === Infinity) {
+        resultDiv.innerHTML = "Bu iki düğüm arasında bir yol yok.";
+    } else {
+        //resultDiv.innerHTML = `En kısa yol: ${path.join(' -> ')}, Toplam mesafe: ${distances[endNode]}`;
+        resultDiv.innerHTML = `En kısa yol: ${path.join(' -> ')} `;
+    } //resultDiv adlı bir HTML elementinin içeriğini en kısa yolun bilgisi ve toplam mesafesi ile güncelleyerek kullanıcıya bu bilgileri göstermeyi amaçlar. Örneğin, ekranda "En kısa yol: A -> B -> C, Toplam mesafe: 150" gibi bir metin görüntülenebilir.
+}
+function handleCanvasClick(event) { //fare tıklanmasını dinler
+    const rect = canvas.getBoundingClientRect(); //getBoundingClientRect() fonksiyonu, bir HTML öğesinin görüntülenen bölgesinin dikdörtgen sınırlarını döndüren bir metottur.
+    //getBoundingClientRect() fonksiyonu ile Canvas öğesinin görüntülenen alanının sınırlarını alıyor. Bu, sonraki hesaplamalarda fare tıklamasının Canvas üzerindeki konumunu belirlemek için kullanılacak.
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    //Fare tıklamasının Canvas içindeki x ve y koordinatlarını hesaplıyor. Fare tıklamasının sayfa üzerindeki koordinatlarından Canvas elementinin sınırlarını çıkartarak Canvas içindeki konumu belirleniyor.
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    //Canvas'ın merkezinin x ve y koordinatlarını hesaplıyor.
+    const distanceToCenter = Math.sqrt((mouseX - centerX) ** 2 + (mouseY - centerY) ** 2);
+    //Tıklanan noktanın Canvas merkezine olan uzaklığını hesaplıyor. İki nokta arasındaki uzaklık hesaplaması Pisagor Teoremi ile yapılıyor.
+    if (distanceToCenter > nodeRadius) { //Eğer tıklama noktası Canvas merkezinin dışında, belirli bir yarıçap değerinden daha uzaksa (muhtemelen yeni bir düğüm eklemek istendiği anlamına gelir), bu koşulun içine giriyor.
+        //Bu bölümde, yeni bir düğüm eklemek için gerekli hesaplamalar yapılıyor. Yeni bir düğüm adı oluşturuluyor, grafiğe bu düğüm ekleniyor ve varolan düğümler arasına rastgele ağırlıklar ekleniyor.
+        const angle = Math.atan2(mouseY - centerY, mouseX - centerX);
+        const newNode = String.fromCharCode(65 + nodeCount);
+
+        graph[newNode] = {}; //Yeni eklenen düğüme (newNode) karşılık gelecek boş bir nesne oluşturuluyor. Bu nesne, yeni düğümün diğer düğümlere olan ağırlıklarını tutacak.
+        for (let node in graph) {
+            graph[newNode][node] = Math.floor(Math.random() * 10) + 1; //newNode düğümü ile her bir mevcut düğüm arasına rastgele bir ağırlık atanıyor. Bu ağırlık, 1 ile 10 arasında (1 dahil, 10 hariç) rastgele bir tam sayı olacaktır. Bu, yeni düğümün her bir mevcut düğüme olan bağlantısının ağırlığını belirler.
+            graph[node][newNode] = Math.floor(Math.random() * 10) + 1; //mevcut düğümden yeni düğüme olan bağlantının ağırlığı da rastgele atanıyor.
+        }
+
+        nodeCount++; //Düğüm sayacı artırılıyor, böylece her seferinde yeni bir düğüm eklenirken adları farklı olacaktır.
+        drawGraph(graph);
+        findShortestPath(graph);
+    }
+}
+
+function drawGraph(graph) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); //alanı temizler x,y,width,height şeklinde
+
+    for (let node in graph) {
+        //bir daire üzerinde düğümleri belirli bir açı aralığına göre konumlandırmak için kullanılıyor
+        const angle = (2 * Math.PI * (node.charCodeAt(0) - 65)) / nodeCount; //belirli bir düğümün daire üzerindeki konumunu hesaplamak için kullanılıyor.
+        
+        const x = canvas.width / 2 + Math.cos(angle) * 150; //daire üzerinde hesaplanan radyan değerine göre x koordinatını hesaplar. Math.cos fonksiyonu, verilen açının kosinüsünü döndürür.
+        const y = canvas.height / 2 + Math.sin(angle) * 150; //Bu satır, daire üzerinde hesaplanan radyan değerine göre y koordinatını hesaplar. Math.sin fonksiyonu, verilen açının sinüsünü döndürür.
+        //daire üzerinde belirli bir düğümü, o düğümün alfabetik sırasına göre bir açıya yerleştirerek x ve y koordinatlarını hesaplar. Bu düğümler, daire çevresinde eşit aralıklarla konumlandırılmış gibi görünecektir. x ve y değişkenleri, düğümün Canvas içindeki konumunu belirler.
+
+        ctx.beginPath();
+        ctx.arc(x, y, nodeRadius, 0, 2 * Math.PI);//arc metodu daire çizmek için kullanılır.  2 * Math.PI: Bitiş açısı (radyan cinsinden), bu durumda tam bir dairenin açısı (360 derece)
+        ctx.stroke(); // Bu komut, belirtilen yolu (çizgi veya şekil) çizmek için kullanılır. Yani, önceki beginPath() komutuyla başlatılan yolu tamamlar ve görünür bir çizim gerçekleştirir.
+
+        ctx.fillText(node, x, y); //verilen metni belirtilen koordinatta yazmak için kullanılır. Parametreleri şu şekildedir:
+
+                                //node: Yazılacak metin.
+                                //x ve y: Metnin başlangıç koordinatları (x ve y).
+
+        for (let neighbor in graph[node]) { //Bu döngü, graph[node] içindeki her bir komşu düğüm üzerinde işlem yapmayı sağlar.
+            const neighborAngle = (2 * Math.PI * (neighbor.charCodeAt(0) - 65)) / nodeCount;  //Komşu düğümün, daire üzerindeki konumunu hesaplamak için kullanılıyor
+            const neighborX = canvas.width / 2 + Math.cos(neighborAngle) * 150;
+            const neighborY = canvas.height / 2 + Math.sin(neighborAngle) * 150;
+
+            ctx.beginPath(); //Çizgi çizimi için yeni bir yol başlatılır.
+            ctx.moveTo(x, y); //izginin başlangıç noktasını belirtir. Başlangıç noktası x ve y koordinatlarıdır.
+            ctx.lineTo(neighborX, neighborY); //Çizginin bitiş noktasını belirtir. Bitiş noktası komşu düğümün hesaplanan neighborX ve neighborY koordinatlarıdır.
+            ctx.stroke(); //Çizgiyi çizmek için kullanılır.
+
+            // Düğümler arası mesafeleri çizgilerin üzerine yazdır
+            const distance = graph[node][neighbor]; //Düğümler arasındaki mesafeyi (distance) hesaplar. graph nesnesindeki düğüm ve komşu düğüm arasındaki uzaklığı alır.
+            const textX = (x + neighborX) / 2; //Uzaklığı yazdırmak için kullanılacak metnin konumunu hesaplar. Bu konum, çizginin orta noktasıdır.
+            const textY = (y + neighborY) / 2;
+            ctx.fillText(distance, textX, textY); // Düğümler arasındaki ağırlığı (distance) belirtilen textX ve textY koordinatlarında Canvas üzerine yazar.
+        }
+    }
+}
+
+
+      
+    </script>
+</body>
+</html>
+
+
